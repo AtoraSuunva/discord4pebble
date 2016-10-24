@@ -7,7 +7,7 @@ var Voice = require('ui/voice');
 var Vibe = require('ui/vibe');
 var Discord = require('d4p.js');
 var Menufy = require('menufy.js');
-var token = 'this needs to have a setting somewhere';
+var token = "put your token here (settings soon I promise)";
 
 var client = new Discord.Client({debug: true});
 var menufy = new Menufy.er();
@@ -20,7 +20,25 @@ var fontSizeName = ['small', 'large', 'mono', 'classic-small', 'classic-large'];
 var currentChannel = '0';
 var channelText = {};
 
+var storedMessages = {};
+//Stored as:
+//'channelId': [
+//	{
+//		author: ...
+//		content: ...
+//    otherMessageStuff
+//	}
+//]
+
+//Global Menu for messages
+var channelMessages = new UI.Menu({});
+
+channelMessages.on('select', function(e) {
+	showMessage(e.item.message);
+});
+
 // Global channelCard so that it can be edited later
+/*
 var channelCard = new UI.Card({
   scrollable: true
 });
@@ -45,11 +63,11 @@ channelCard.on('hide', function(q){
   channelText[currentChannel] = channelText[currentChannel].slice(0, 3);
   currentChannel = 0;
 });
-
+*/
 var loadingCard = new UI.Card({
   title: 'd4p',
 	body: 'Loading...',
-	scrollable: true
+	scrollable: false
 });
 loadingCard.show();
 
@@ -58,8 +76,7 @@ client.on('ready', function(data) {
 	loadingCard.hide();
 	menuMain();
 });
-
-
+/*
 client.on('message', function(message) {
   if (channelText[message.channel_id] == null)
     channelText[message.channel_id] = [];
@@ -81,6 +98,37 @@ client.on('message', function(message) {
     if (user.id == client.user[0].id)
       Vibe.vibrate('double');
   });
+});
+*/
+
+client.on('message', function(message) {
+	console.log('Got Message! #' + message.channel.name + ' ' + message.channel.id + '\n' + currentChannel);
+	if (storedMessages[message.channel_id] == null) {
+    storedMessages[message.channel_id] = [];
+	}
+	
+	storedMessages[message.channel_id].unshift(message);
+	
+	if (message.channel_id !== currentChannel) {
+		if (storedMessages[message.channel_id].length > 6) { // We're only cachine 6 messages currently
+   	 storedMessages[message.channel_id] = storedMessages[message.channel_id].slice(0, 6);
+		}
+	} else {
+		console.log('Message in current channel!');
+		if (storedMessages[message.channel_id].length > 20) { // Cache 20 messages of the user is looking at the channel
+   	 storedMessages[message.channel_id] = storedMessages[message.channel_id].slice(0, 20);
+		}
+		message.mentions.forEach(function(user) { // Vibrate if mentioned
+    if (user.id == client.user[0].id)
+      Vibe.vibrate('double');
+  	});
+		channelMessages.selection(function(e) {
+			console.log(e.itemIndex);
+		});
+		
+		channelMessages.items(0, menufy.messages(storedMessages[currentChannel])); //update the messages
+	}
+	
 });
 
 function menuMain() {
@@ -152,8 +200,6 @@ function menuChannels(guildId) {
 		}]
 	});
 	
-	//console.log(check(curGuild.members));
-	
 	menu.on('longSelect', function(e) {
 		var channelDetails = new UI.Card({
 			title: '#' + e.item.name,
@@ -166,6 +212,7 @@ function menuChannels(guildId) {
 	});
 
 	menu.on('select', function(e) {
+		/*
     if (channelText[e.item.id] == null) // Check if we have any messages cached
       channelText[e.item.id] = []; // if no, create a new array to prevent chaos
     
@@ -175,9 +222,20 @@ function menuChannels(guildId) {
     currentChannel = e.item.id;
     
 		channelCard.show();
+		*/
+		menuMessages(e.item.id, e.item.name);
 	});
 	
 	menu.show();
+}
+
+function menuMessages(channelId, channelName) {
+	currentChannel = channelId;
+	channelMessages.section(0, {
+		title: '#' + channelName,
+		items: menufy.messages(storedMessages[channelId])
+	});
+	channelMessages.show();
 }
 
 function menuSettings() {
@@ -250,8 +308,19 @@ function formatMessage(message) { // Takes a message object and turns mentions i
   var content = message.cleanContent;
   if (content.length > 250) // Trim the message to 250 characters to keep from crashing, though this may not help much
     content = content.substring(0, 250) + '...'; // TODO: find the closest space so it isn't cut in the middle of a word.
-  var text = '@' + message.author.username + ': ' + content;
-  return text;
+  return content;
+}
+
+
+function showMessage(message) {
+		var card = new UI.Card({
+			title:  message.author.username,
+			subtitle: (message.timestamp !== '-1' ? convertTimestamp(message.timestamp) : ''),
+			body: formatMessage(message),
+			scrollable: true,
+			style: fontSizeName[fontSize]
+	});
+	card.show();
 }
 
 function convertTimestamp(timestamp) {
