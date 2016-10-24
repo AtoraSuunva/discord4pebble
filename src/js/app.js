@@ -1,13 +1,13 @@
 /*jshint -W041 */
 
-var version = '0.0.5';
+var version = '0.6, road is gya';
 
 var UI = require('ui');
 var Voice = require('ui/voice');
 var Vibe = require('ui/vibe');
 var Discord = require('d4p.js');
 var Menufy = require('menufy.js');
-var token = "put your token here (settings soon I promise)";
+var token = "token here m8";
 
 var client = new Discord.Client({debug: true});
 var menufy = new Menufy.er();
@@ -18,8 +18,6 @@ if (fontSize === undefined) fontSize = 0;
 var fontSizeName = ['small', 'large', 'mono', 'classic-small', 'classic-large'];
 
 var currentChannel = '0';
-var channelText = {};
-
 var storedMessages = {};
 //Stored as:
 //'channelId': [
@@ -37,33 +35,22 @@ channelMessages.on('select', function(e) {
 	showMessage(e.item.message);
 });
 
-// Global channelCard so that it can be edited later
-/*
-var channelCard = new UI.Card({
-  scrollable: true
-});
-
-channelCard.on('longClick', function(e) { // Clear channel on long click
-  channelText[currentChannel] = [];
-  channelCard.body('');
-});
-
-channelCard.on('click', function(e) { // TODO: implement message sending so this actually does something
-  Voice.dictate('start', false, function(e) {
+channelMessages.on('longSelect', function(e) {
+	Voice.dictate('start', false, function(e) {
     if (e.err) {
       console.log('Error: ' + e.err);
       return;
     }
 
-    channelCard.subtitle('Success: ' + e.transcription);
+    console.log('Success: ' + e.transcription);
   });
 });
 
-channelCard.on('hide', function(q){
-  channelText[currentChannel] = channelText[currentChannel].slice(0, 3);
-  currentChannel = 0;
-});
-*/
+//I'd get it to reduce the stored messages to 6 when you leave the channel
+//But I can't seem to register the back button click event
+//And using on 'hide' breaks it when you look at a message
+//Also it's 3 am as I'm writing this
+
 var loadingCard = new UI.Card({
   title: 'd4p',
 	body: 'Loading...',
@@ -76,57 +63,38 @@ client.on('ready', function(data) {
 	loadingCard.hide();
 	menuMain();
 });
-/*
-client.on('message', function(message) {
-  if (channelText[message.channel_id] == null)
-    channelText[message.channel_id] = [];
-  
-  channelText[message.channel_id] = unshift(formatMessage(message), channelText[message.channel_id]);
-    // Insert a new message to the start of the array
-    // gotta love that array.unshift doesn't seem to be officially supported, maybe I just suck at JS
-  
-  if (channelText[message.channel_id].length > 6) // We're only cachine 6 messages currently
-    channelText[message.channel_id] = channelText[message.channel_id].slice(0, 6);
-  
-	if (message.channel_id !== currentChannel) return; // If we're not viewing the channel, we don't need to do anything
-  
-  channelCard.title('#' + message.channel.name);
-  channelCard.body(displayMessages(channelText[message.channel_id]));
-  channelCard.style(fontSizeName[fontSize]);
-  
-  message.mentions.forEach(function(user) { // Vibrate if mentioned
-    if (user.id == client.user[0].id)
-      Vibe.vibrate('double');
-  });
-});
-*/
 
 client.on('message', function(message) {
-	console.log('Got Message! #' + message.channel.name + ' ' + message.channel.id + '\n' + currentChannel);
+	//console.log('Got Message! #' + message.channel.name + ' ' + message.channel.id + '\n' + currentChannel);
 	if (storedMessages[message.channel_id] == null) {
     storedMessages[message.channel_id] = [];
 	}
 	
-	storedMessages[message.channel_id].unshift(message);
+	storedMessages[message.channel_id].push(message);
 	
 	if (message.channel_id !== currentChannel) {
-		if (storedMessages[message.channel_id].length > 6) { // We're only cachine 6 messages currently
-   	 storedMessages[message.channel_id] = storedMessages[message.channel_id].slice(0, 6);
+		if (storedMessages[message.channel_id].length > 6) { // We're only caching 6 messages currently
+   	 storedMessages[message.channel_id].shift();
 		}
 	} else {
 		console.log('Message in current channel!');
-		if (storedMessages[message.channel_id].length > 20) { // Cache 20 messages of the user is looking at the channel
-   	 storedMessages[message.channel_id] = storedMessages[message.channel_id].slice(0, 20);
+		var MAX_MESSAGES_CUR = 20; //Max amount of messages to cache
+		if (storedMessages[message.channel_id].length > MAX_MESSAGES_CUR) { // Cache messages of the channel that the user is viewing
+   	 storedMessages[message.channel_id].shift(0, MAX_MESSAGES_CUR);
 		}
 		message.mentions.forEach(function(user) { // Vibrate if mentioned
     if (user.id == client.user[0].id)
       Vibe.vibrate('double');
   	});
-		channelMessages.selection(function(e) {
-			console.log(e.itemIndex);
-		});
 		
 		channelMessages.items(0, menufy.messages(storedMessages[currentChannel])); //update the messages
+		channelMessages.selection(function(e) {
+			if(e.itemIndex === storedMessages[currentChannel].length - 1) { //If the user has the last message selected, auto-scroll to latest one
+				 channelMessages.selection(0, storedMessages[currentChannel].length - 1);
+			} else if (e.itemIndex !== 0 && storedMessages[currentChannel].length !== MAX_MESSAGES_CUR){ //Auto-Scroll so that the highlighted message is always in view
+				channelMessages.selection(0, e.itemIndex - 1);
+			}
+		});
 	}
 	
 });
@@ -212,17 +180,6 @@ function menuChannels(guildId) {
 	});
 
 	menu.on('select', function(e) {
-		/*
-    if (channelText[e.item.id] == null) // Check if we have any messages cached
-      channelText[e.item.id] = []; // if no, create a new array to prevent chaos
-    
-    channelCard.title('#' + e.item.name);
-    channelCard.body(displayMessages(channelText[e.item.id]));
-    channelCard.style(fontSizeName[fontSize]);
-    currentChannel = e.item.id;
-    
-		channelCard.show();
-		*/
 		menuMessages(e.item.id, e.item.name);
 	});
 	
@@ -253,6 +210,8 @@ function menuSettings() {
 				title: 'D4P v' + version
 			}, {
 				title: 'by Atlas#2564'
+			}, {
+				title: '& Googie2149#1368'
 			}]
 		});
 
@@ -279,29 +238,6 @@ function capitalize(str) { //I'm lazy!
 	return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function unshift(item, array) {
-  var newArray = new Array(array.length + 1);
-  newArray[0] = item;
-  for (var i = 1; i < newArray.length; i++) {
-    newArray[i] = array[i - 1];
-  }
-  
-  return newArray;
-}
-
-function displayMessages(array) {
-  var text = '';
-  
-  array.forEach(function(message) {
-    if (text === '')
-      text = message;
-    else
-      text = text + '\n' + message;
-  });
-  
-  return text;
-}
-
 function formatMessage(message) { // Takes a message object and turns mentions into readable text, and checks nicknames
   // A lot of this is assuming that we're in a server and not a private message.
   
@@ -311,8 +247,9 @@ function formatMessage(message) { // Takes a message object and turns mentions i
   return content;
 }
 
-
 function showMessage(message) {
+	console.log('timestamp' + message.timestamp);
+	//2016-10-24T07:10:43.761000+00:00
 		var card = new UI.Card({
 			title:  message.author.username,
 			subtitle: (message.timestamp !== '-1' ? convertTimestamp(message.timestamp) : ''),
@@ -324,7 +261,6 @@ function showMessage(message) {
 }
 
 function convertTimestamp(timestamp) {
-	if (typeof timestamp === 'string') timestamp = parseInt(timestamp, 10);
 	var d = new Date(timestamp);
 	return padStart(d.getDate()    , 2, '0') + '/' +
 		     padStart(d.getMonth()+1 , 2, '0') + '/' +
