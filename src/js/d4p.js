@@ -21,7 +21,7 @@ module.exports.Client = function(opt) {
 	var users   = this.users   = [];
 	var friends = this.friends = [];
 	
-	var socket = new WebSocket("wss://gateway.discord.gg/?v=5&encoding=json");
+	var socket = new WebSocket("wss://gateway.discord.gg/?v=6&encoding=json");
 	var api = 'https://discordapp.com/api';
 	
 	//FIND THINGS

@@ -1,13 +1,13 @@
 /*jshint -W041 */
 
-var version = '0.0.5';
+var version = '0.6, road is gya';
 
 var UI = require('ui');
 var Voice = require('ui/voice');
 var Vibe = require('ui/vibe');
 var Discord = require('d4p.js');
 var Menufy = require('menufy.js');
-var token = "put your token here (settings soon I promise)";
+var token = "";
 
 var client = new Discord.Client({debug: true});
 var menufy = new Menufy.er();
@@ -18,8 +18,6 @@ if (fontSize === undefined) fontSize = 0;
 var fontSizeName = ['small', 'large', 'mono', 'classic-small', 'classic-large'];
 
 var currentChannel = '0';
-var channelText = {};
-
 var storedMessages = {};
 //Stored as:
 //'channelId': [
@@ -102,31 +100,36 @@ client.on('message', function(message) {
 */
 
 client.on('message', function(message) {
-	console.log('Got Message! #' + message.channel.name + ' ' + message.channel.id + '\n' + currentChannel);
+	//console.log('Got Message! #' + message.channel.name + ' ' + message.channel.id + '\n' + currentChannel);
 	if (storedMessages[message.channel_id] == null) {
     storedMessages[message.channel_id] = [];
 	}
 	
-	storedMessages[message.channel_id].unshift(message);
+	storedMessages[message.channel_id].push(message);
 	
 	if (message.channel_id !== currentChannel) {
 		if (storedMessages[message.channel_id].length > 6) { // We're only cachine 6 messages currently
-   	 storedMessages[message.channel_id] = storedMessages[message.channel_id].slice(0, 6);
+   	 storedMessages[message.channel_id].shift();
 		}
 	} else {
 		console.log('Message in current channel!');
 		if (storedMessages[message.channel_id].length > 20) { // Cache 20 messages of the user is looking at the channel
-   	 storedMessages[message.channel_id] = storedMessages[message.channel_id].slice(0, 20);
+   	 storedMessages[message.channel_id].shift(0, 20);
 		}
 		message.mentions.forEach(function(user) { // Vibrate if mentioned
     if (user.id == client.user[0].id)
       Vibe.vibrate('double');
   	});
-		channelMessages.selection(function(e) {
-			console.log(e.itemIndex);
-		});
 		
 		channelMessages.items(0, menufy.messages(storedMessages[currentChannel])); //update the messages
+		channelMessages.selection(function(e) {
+			console.log('---');
+			console.log(e.itemIndex);
+			console.log(storedMessages[currentChannel].length - 1);
+			if(e.itemIndex === storedMessages[currentChannel].length - 1) { //If the user has the last message selected, auto-scroll to lastest one
+				 channelMessages.selection(0, storedMessages[currentChannel].length - 1);
+			}
+		});
 	}
 	
 });
@@ -253,6 +256,8 @@ function menuSettings() {
 				title: 'D4P v' + version
 			}, {
 				title: 'by Atlas#2564'
+			}, {
+				title: '& Googie2149#1368'
 			}]
 		});
 

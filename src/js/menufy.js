@@ -48,7 +48,6 @@ module.exports.er = function(opt) {
 	
 	this.messages = function(messages) {
 		var items = [];
-		
 		messages.forEach(function(message) {
 			items.push({
 				title: message.author.username,
